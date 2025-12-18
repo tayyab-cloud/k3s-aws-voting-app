@@ -1,0 +1,17 @@
+# Ignore Terraform state and lock files (Contains sensitive data)
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+
+# Ignore AWS credentials and keys
+*.pem
+*.key
+.env
+aws_keys.csv
+
+# Ignore Ansible temporary files
+*.retry
+
+# System files
+.DS_Store
