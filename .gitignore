@@ -19,3 +19,4 @@ aws_keys.csv
 
 # System files
 .DS_Store
+.vscode/
