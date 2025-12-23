@@ -32,3 +32,9 @@ variable "public_key_path" {
   description = "Path to the public SSH key on your local machine"
   type        = string
 }
+
+variable "private_key_path" {
+  description = "Path to the private SSH key on your local machine"
+  type        = string
+  
+}
