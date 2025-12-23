@@ -35,3 +35,13 @@ module "compute" {
   
   project_name      = var.project_name
 }
+
+# Generate Ansible Inventory File
+resource "local_file" "ansible_inventory" {
+  content = templatefile("${path.module}/templates/inventory.tftpl", {
+    public_ip = module.compute.public_ip
+
+    private_key_path  = var.private_key_path
+  })
+  filename = "${path.module}/../ansible/inventory/hosts.ini"
+}

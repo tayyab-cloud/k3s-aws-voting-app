@@ -1,0 +1,51 @@
+---
+# --- SWAP CONFIGURATION (CRITICAL FOR FREE TIER) ---
+- name: Check if swap file exists
+  stat:
+    path: /swapfile
+  register: swap_file_check
+
+- name: Create swap file (2GB)
+  command: fallocate -l 2G /swapfile
+  when: not swap_file_check.stat.exists
+
+- name: Set swap file permissions
+  file:
+    path: /swapfile
+    mode: '0600'
+
+- name: Format swap file
+  command: mkswap /swapfile
+  when: not swap_file_check.stat.exists
+
+- name: Enable swap file
+  command: swapon /swapfile
+  when: not swap_file_check.stat.exists
+
+- name: Add swap to /etc/fstab
+  mount:
+    name: none
+    src: /swapfile
+    fstype: swap
+    opts: sw
+    state: present
+
+# --- SYSTEM UPDATES ---
+- name: Update apt cache
+  apt:
+    update_cache: yes
+    cache_valid_time: 86400 # Changed to 24 hours to prevent constant updates
+
+- name: Upgrade all packages
+  apt:
+    upgrade: dist
+    force_apt_get: yes
+
+- name: Install essential dependencies
+  apt:
+    name:
+      - curl
+      - git
+      - vim
+      - htop
+    state: present

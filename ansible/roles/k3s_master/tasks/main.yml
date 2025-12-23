@@ -1,0 +1,32 @@
+---
+- name: Download K3s install script
+  get_url:
+    url: https://get.k3s.io
+    dest: /tmp/k3s_install.sh
+    mode: '0700'
+
+- name: Execute K3s installation (Master)
+  shell: /tmp/k3s_install.sh
+  environment:
+    INSTALL_K3S_EXEC: "--write-kubeconfig-mode 644"
+  args:
+    creates: /usr/local/bin/k3s  # This ensures it doesn't run if K3s is installed
+  register: k3s_install_status
+
+- name: Check if K3s service is running
+  service:
+    name: k3s
+    state: started
+    enabled: yes
+
+- name: Wait for node to be ready
+  command: kubectl get nodes
+  register: k3s_nodes
+  changed_when: false
+  retries: 5
+  delay: 10
+  until: k3s_nodes.rc == 0
+
+- name: Verify Cluster Status
+  debug:
+    msg: "{{ k3s_nodes.stdout_lines }}"
