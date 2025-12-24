@@ -1,0 +1,31 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: voting-ingress
+  annotations:
+    # We tell Traefik this is for him
+    kubernetes.io/ingress.class: "traefik"
+spec:
+  rules:
+  # ROUTE 1: Voting App (The Frontend)
+  - host: vote.52.90.72.242.nip.io
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: vote
+            port:
+              number: 5000
+  # ROUTE 2: Result App (The Admin View)
+  - host: result.52.90.72.242.nip.io
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: result
+            port:
+              number: 5001

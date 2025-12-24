@@ -1,0 +1,30 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker-deployment
+  labels:
+    app: worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: worker
+  template:
+    metadata:
+      labels:
+        app: worker
+    spec:
+      containers:
+      - name: worker
+        image: dockersamples/examplevotingapp_worker
+        # The worker needs to know where Redis and DB are. 
+        # Thankfully, the code looks for hosts named "redis" and "db", 
+        # which match our Service names exactly.
+        resources:
+          requests:
+            memory: "100Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi" # Java is memory hungry
+            cpu: "500m"
