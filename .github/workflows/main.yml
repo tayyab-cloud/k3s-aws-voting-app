@@ -1,0 +1,90 @@
+name: Full Stack DevOps Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - feature/day-2-restore
+  workflow_dispatch: # Allows manual trigger button
+
+env:
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  AWS_DEFAULT_REGION: us-east-1
+
+jobs:
+  provision-and-deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./terraform
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # 1. SSH Keys Setup (Robot needs keys)
+      - name: Setup SSH Keys
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          # Place the public key in the terraform folder (so main.tf can read it)
+          echo "${{ secrets.SSH_PUBLIC_KEY }}" > k3s_key.pub
+
+      # 2. Terraform Setup
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Apply
+        run: terraform apply --auto-approve
+
+      - name: Get Server IP
+        id: get-ip
+        run: |
+          echo "SERVER_IP=$(terraform output -raw public_ip)" >> $GITHUB_ENV
+
+      # 3. Wait for SSH (Server takes time to wake up)
+      - name: Wait for SSH to be ready
+        run: |
+          echo "Waiting for EC2 to be ready..."
+          sleep 60
+          # Add Host Key to avoid "Are you sure?" prompt
+          ssh-keyscan -H ${{ env.SERVER_IP }} >> ~/.ssh/known_hosts
+
+      # 4. Ansible Configuration
+      - name: Run Ansible Playbook
+        working-directory: ./ansible
+        run: |
+          # Create inventory file dynamically
+          echo "[k3s_master]" > inventory.ini
+          echo "${{ env.SERVER_IP }} ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/id_rsa" >> inventory.ini
+          
+          # Run Playbook
+          ansible-playbook -i inventory.ini site.yml
+
+      # 5. Fetch Kubeconfig (Dynamic)
+      - name: Fetch Kubeconfig
+        run: |
+          # Download config from server
+          scp -i ~/.ssh/id_rsa ubuntu@${{ env.SERVER_IP }}:/etc/rancher/k3s/k3s.yaml kubeconfig.yaml
+          
+          # Update IP in config (localhost -> public IP)
+          sed -i "s/127.0.0.1/${{ env.SERVER_IP }}/g" kubeconfig.yaml
+          
+          # Add insecure-skip-tls-verify (Same hack we did locally)
+          sed -i '/certificate-authority-data:/d' kubeconfig.yaml
+          sed -i '/server:/i \    insecure-skip-tls-verify: true' kubeconfig.yaml
+
+      # 6. Deploy Application
+      - name: Deploy Manifests
+        working-directory: ./
+        run: |
+          # Inject IP into Ingress
+          sed -i "s/{{IP}}/${{ env.SERVER_IP }}/g" k8s-manifests/ingress.yaml
+          
+          # Apply using the fetched kubeconfig
+          kubectl apply -R -f k8s-manifests/ --kubeconfig=terraform/kubeconfig.yaml

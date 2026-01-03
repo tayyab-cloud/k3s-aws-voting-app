@@ -8,7 +8,7 @@ metadata:
 spec:
   rules:
   # ROUTE 1: Voting App (The Frontend)
-  - host: vote.{{IP}}.nip.io 
+  - host: vote.54.167.226.219.nip.io 
     http:
       paths:
       - path: /
@@ -19,7 +19,7 @@ spec:
             port:
               number: 5000
   # ROUTE 2: Result App (The Admin View)
-  - host: result.{{IP}}.nip.io 
+  - host: result.54.167.226.219.nip.io 
     http:
       paths:
       - path: /
