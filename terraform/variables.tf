@@ -37,6 +37,7 @@ variable "instance_type" {
 variable "public_key_path" {
   description = "Path to the public SSH key on your local machine"
   type        = string
+  default = "k3s_key.pub"
 }
 
 variable "private_key_path" {
