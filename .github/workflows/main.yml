@@ -5,6 +5,12 @@ on:
     branches:
       - main
       - feature/day-2-restore
+    paths-ignore:
+      - 'README.md'
+      - 'docs/**'
+      - '*.png'
+      - '*.PNG'
+      - '*.jpg'
   workflow_dispatch: # Allows manual trigger button
 
 env:
